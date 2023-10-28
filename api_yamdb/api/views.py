@@ -5,6 +5,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Avg
+
 from rest_framework import filters, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import (AllowAny, IsAuthenticated,
@@ -14,24 +16,20 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.viewsets import ModelViewSet
 from rest_framework_simplejwt.tokens import AccessToken
 from rest_framework.exceptions import ValidationError
+from rest_framework import filters, mixins
+from rest_framework.viewsets import GenericViewSet, ModelViewSet
+
 from .permissions import (IsAdmin, IsAdminOrReadOnly,
                           IsAuthorAdminModeratorOrReadOnly)
 from .serializers import (ConfirmationCodeSerializer, UserCreationSerializer,
                           UserSerializer, ConfirmationCodeSerializer,
                           MeSerializer)
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
-from django.db.models import Avg
-from rest_framework import filters, mixins
-
-from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from reviews.models import Category, Genre, Title, Review, Comment
-
 from .filters import TitleFilter
 from .serializers import (CategorySerializer, GenreSerializer,
                           TitleReadSerializer, TitleWriteSerializer,
                           ReviewSerializer, CommentSerializer)
-from rest_framework.exceptions import MethodNotAllowed 
-from rest_framework.exceptions import PermissionDenied
+
 
 class CDLViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin,
                  mixins.ListModelMixin, GenericViewSet):
@@ -157,15 +155,10 @@ class ReviewViewSet(ModelViewSet):
     permission_classes = (IsAuthorAdminModeratorOrReadOnly,)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
-  #  def get_queryset(self):
-  #      title_id = self.kwargs.get('title_id')
-  #      title = get_object_or_404(Title, id=title_id)
-  #      return title.reviews.all()
-
     def get_queryset(self):
         title_id = self.kwargs['title_id']
         return Review.objects.filter(title_id=title_id)
-    
+
     def perform_create(self, serializer):
         title_id = self.kwargs.get('title_id')
         user = self.request.user
@@ -179,7 +172,8 @@ class ReviewViewSet(ModelViewSet):
 class CommentViewSet(ModelViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
-    permission_classes = (IsAuthorAdminModeratorOrReadOnly, IsAuthenticatedOrReadOnly)
+    permission_classes = (IsAuthorAdminModeratorOrReadOnly,
+                          IsAuthenticatedOrReadOnly)
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     # получаем комментарии к определенному отзыву.
